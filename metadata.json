@@ -1,0 +1,6 @@
+{
+  "name": "Flutter Indoor Positioning & Navigation Engine",
+  "description": "Production-ready Flutter Indoor Positioning System fusing BLE RSSI Path Loss, 1D Kalman Filtering, Trilateration, PDR Step Detection, A* Building Graph Pathfinding, and Realtime Supabase Sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
