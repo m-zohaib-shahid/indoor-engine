@@ -1,23 +1,34 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence, MotionConfig, motion, useReducedMotion } from 'motion/react';
 import { SplashScreen } from './components/SplashScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { CleanNavigationDashboard } from './components/CleanNavigationDashboard';
 import { authService, AuthUser } from './services/authService';
+import { initialOAuthCallbackError } from './lib/insforge';
 
 type AppScreen = 'splash' | 'auth' | 'dashboard';
 
 export default function App() {
   const prefersReducedMotion = useReducedMotion();
   const [screen, setScreen] = useState<AppScreen>('splash');
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() =>
-    authService.getCurrentUser()
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [authBannerError, setAuthBannerError] = useState<string | null>(
+    initialOAuthCallbackError
   );
 
-  const handleSplashComplete = useCallback(() => {
-    const existingUser = authService.getCurrentUser();
+  const sessionCheckRef = useRef<Promise<AuthUser | null> | null>(null);
+
+  useEffect(() => {
+    // Resolve real InsForge session (and any OAuth PKCE callback) in parallel with SplashScreen
+    sessionCheckRef.current = authService.getCurrentUser();
+  }, []);
+
+  const handleSplashComplete = useCallback(async () => {
+    const checkPromise = sessionCheckRef.current ?? authService.getCurrentUser();
+    const existingUser = await checkPromise;
     if (existingUser) {
       setCurrentUser(existingUser);
+      setAuthBannerError(null);
       setScreen('dashboard');
     } else {
       setScreen('auth');
@@ -26,12 +37,14 @@ export default function App() {
 
   const handleAuthSuccess = useCallback((user: AuthUser) => {
     setCurrentUser(user);
+    setAuthBannerError(null);
     setScreen('dashboard');
   }, []);
 
   const handleSignOut = useCallback(async () => {
     await authService.signOut();
     setCurrentUser(null);
+    setAuthBannerError(null);
     setScreen('auth');
   }, []);
 
@@ -73,7 +86,10 @@ export default function App() {
               exit="exit"
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             >
-              <AuthScreen onAuthSuccess={handleAuthSuccess} />
+              <AuthScreen
+                onAuthSuccess={handleAuthSuccess}
+                initialError={authBannerError}
+              />
             </motion.div>
           )}
 
